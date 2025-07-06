@@ -1,84 +1,91 @@
-from random import sample, shuffle
+import numpy as np
+import random
+from typing import Self, TypeAlias
+
+import numpy.typing as npt
+
+Array: TypeAlias = npt.NDArray[np.float64]
+Labels: TypeAlias = npt.NDArray[np.int_]
 
 class Kmeans:
-    NUM_IRIS: int = 150
-    NUM_ATRIBUTOS: int = 4
-    def __init__(self, iris_path: str, k: int) -> None:
-        
-        self.k = k
-        self.pontos: list[list[float]] = [[0.0, 0.0, 0.0, 0.0] for _ in range(self.NUM_IRIS)]
-        self.classes: list[str] = ['' for _ in range(self.NUM_IRIS)]
+    def __init__(self, k: int, tol: float = 1e-4, max_iter: int = 100) -> None:
+        self.k: int = k
+        self.tol: float = tol
+        self.max_iter: int = max_iter
+        self.centroids: Array | None = None
+        self.labels_: Labels | None = None
 
-        linha: int = 0
-        with open(iris_path) as file:
-            for line in file:
-                valores: list[str] = line.split(',')
-                self.classes[linha] = valores[-1]
-                for i in range(self.NUM_ATRIBUTOS):
-                    self.pontos[linha][i] = float(valores[i])
-                linha += 1
+    def fit(self, data: Array) -> Self:
+        self.centroids = self._initialize_centroids(data)
 
-        dados: list[tuple[list[float], str]] = list(zip(self.pontos, self.classes))
-        shuffle(dados)
-        pontos, classes = zip(*dados)
-        self.pontos = list(map(list, pontos))
-        self.classes = list(classes)
+        for _ in range(self.max_iter):
+            self.labels_ = self._assign_clusters(data)
+            
+            new_centroids = self._update_centroids(data)
 
-    def fit_predict(self) -> None:
-        self.centroides: list[int] = sample(range(150), self.k)
-        # self.centroides: list[int] = [25, 75, 125]
-        rodadas: int = 1
-        while True:
-            self.grupos: list[list[int]] = [[] for _ in range(self.k)]
-            init: list[int] = self.centroides.copy()
-
-            for iris in range(self.NUM_IRIS):
-                min_dist: float = float('inf')
-                min_idx: int = -1
-                for centroide in self.centroides:
-                    dist: float = self._calculate_dist(self.pontos[iris], self.pontos[centroide])
-                    if dist < min_dist:
-                        min_dist = dist
-                        min_idx = centroide
-                self.grupos[self.centroides.index(min_idx)].append(iris)
-
-            for grupo_idx, grupo in enumerate(self.grupos):
-                min_dist: float = float('inf')
-                min_idx: int = -1
-                for iris1 in grupo:
-                    dist: float = 0.0
-                    for iris2 in grupo:
-                        dist += self._calculate_dist(self.pontos[iris1], self.pontos[iris2])
-                
-                    if dist < min_dist:
-                        min_dist = dist
-                        min_idx = iris1
-
-                self.centroides[grupo_idx] = min_idx
-
-            if init == self.centroides:
-                print(f'Convergiu com {rodadas}')
+            if np.all(np.abs(new_centroids - self.centroids) <= self.tol):
                 break
-            rodadas += 1
+            
+            self.centroids = new_centroids
+        
+        return self
 
-        return
+    def _initialize_centroids(self, data: Array) -> Array:
+        initial_indices = random.sample(range(data.shape[0]), self.k)
+        centroids = data[initial_indices]
+        return centroids
 
+    def _assign_clusters(self, data: Array) -> Labels:
+        if self.centroids is None:
+            raise RuntimeError("Fit method must be called before assigning clusters.")
+        
+        distances = np.zeros((data.shape[0], self.k))
+        for i, centroid in enumerate(self.centroids):
+            distances[:, i] = np.linalg.norm(data - centroid, axis=1)
+        
+        labels = np.argmin(distances, axis=1).astype(np.int_)
+        return labels
 
-    @classmethod
-    def _calculate_dist(cls, iris1: list[float], iris2: list[float]) -> float:
-        dist: float = 0.0
-        for i in range(cls.NUM_ATRIBUTOS):
-            dist += (iris1[i] - iris2[i]) ** 2
+    def _update_centroids(self, data: Array) -> Array:
+        if self.labels_ is None:
+            raise RuntimeError("Labels not found. Cannot update centroids.")
 
-        return dist ** 0.5
+        new_centroids = np.zeros((self.k, data.shape[1]))
+        for i in range(self.k):
+            cluster_points = data[self.labels_ == i]
+            if len(cluster_points) > 0:
+                new_centroids[i] = cluster_points.mean(axis=0)
+        return new_centroids
 
+    def predict(self, data: Array) -> Labels:
+        return self._assign_clusters(data)
 
+def load_iris_data(path: str) -> tuple[Array, npt.NDArray[np.str_]]:
+    points: list[list[float]] = []
+    classes: list[str] = []
+    with open(path) as file:
+        for line in file:
+            if not line.strip():
+                continue
+            parts = line.strip().split(',')
+            points.append([float(v) for v in parts[:-1]])
+            classes.append(parts[-1])
+    
+    return np.array(points, dtype=np.float64), np.array(classes)
 
-a = Kmeans('iris/iris.data', 3)
-a.fit_predict()
-classes = [a.classes[i] for grupo in a.grupos for i in grupo]
-
-for e, classe in enumerate(classes):
-    if e % 50 == 0:
-        print()
-    print(classe)
+if __name__ == '__main__':
+    iris_data, iris_classes = load_iris_data('iris/iris.data')
+    
+    kmeans = Kmeans(k=3)
+    
+    kmeans.fit(iris_data)
+    
+    if kmeans.centroids is not None:
+        clusters = kmeans.predict(iris_data)
+        
+        print("Centroides finais encontrados:")
+        print(np.round(kmeans.centroids, 2))
+        
+        print("\nExemplo de associação de pontos a clusters:")
+        for i in range(10):
+            print(f"Ponto {i} (Classe Original: {iris_classes[i]}) -> Cluster: {clusters[i]}")
