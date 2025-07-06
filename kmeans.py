@@ -1,11 +1,10 @@
-import numpy as np
 import random
-from typing import Self, TypeAlias
+from typing import Self
 
-import numpy.typing as npt
+import numpy as np
 
-Array: TypeAlias = npt.NDArray[np.float64]
-Labels: TypeAlias = npt.NDArray[np.int_]
+from utils import Array, Labels, load_iris_data
+
 
 class Kmeans:
     def __init__(self, k: int, tol: float = 1e-4, max_iter: int = 100) -> None:
@@ -59,19 +58,6 @@ class Kmeans:
 
     def predict(self, data: Array) -> Labels:
         return self._assign_clusters(data)
-
-def load_iris_data(path: str) -> tuple[Array, npt.NDArray[np.str_]]:
-    points: list[list[float]] = []
-    classes: list[str] = []
-    with open(path) as file:
-        for line in file:
-            if not line.strip():
-                continue
-            parts = line.strip().split(',')
-            points.append([float(v) for v in parts[:-1]])
-            classes.append(parts[-1])
-    
-    return np.array(points, dtype=np.float64), np.array(classes)
 
 if __name__ == '__main__':
     iris_data, iris_classes = load_iris_data('iris/iris.data')
