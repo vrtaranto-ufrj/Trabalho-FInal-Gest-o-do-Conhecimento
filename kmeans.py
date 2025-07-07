@@ -36,7 +36,7 @@ class Kmeans:
 
     def _assign_clusters(self, data: Array) -> Labels:
         if self.centroids is None:
-            raise RuntimeError("Fit method must be called before assigning clusters.")
+            raise RuntimeError("O método fit deve ser chamado antes de atribuir clusters.")
         
         distances = np.zeros((data.shape[0], self.k))
         for i, centroid in enumerate(self.centroids):
@@ -47,7 +47,7 @@ class Kmeans:
 
     def _update_centroids(self, data: Array) -> Array:
         if self.labels_ is None:
-            raise RuntimeError("Labels not found. Cannot update centroids.")
+            raise RuntimeError("Rótulos não encontrados. Não é possível atualizar os centróides.")
 
         new_centroids = np.zeros((self.k, data.shape[1]))
         for i in range(self.k):

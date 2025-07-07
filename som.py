@@ -18,7 +18,7 @@ class SOM:
         self.neuron_locations: npt.NDArray[np.int_] | None = None
 
     def fit(self, data: Array) -> Self:
-        shape: tuple[int, int] = data.shape
+        shape: tuple[int, ...] = data.shape
         n_samples, input_dim = shape
         
         self.weights = np.random.rand(self.map_height, self.map_width, input_dim)
@@ -46,7 +46,7 @@ class SOM:
 
     def _find_bmu(self, input_vector: Array) -> tuple[int, int]:
         if self.weights is None:
-            raise RuntimeError("Fit method must be called before finding BMU.")
+            raise RuntimeError("O método fit deve ser chamado antes de encontrar o BMU.")
         
         distances = np.linalg.norm(self.weights - input_vector, axis=2)
         bmu_flat_idx = np.argmin(distances)
@@ -55,7 +55,7 @@ class SOM:
 
     def _update_weights(self, input_vector: Array, bmu_coords: tuple[int, int], learning_rate: float, sigma: float) -> None:
         if self.weights is None or self.neuron_locations is None:
-            raise RuntimeError("Fit method must be called before updating weights.")
+            raise RuntimeError("O método fit deve ser chamado antes de atualizar os pesos.")
         
         grid_dist = np.linalg.norm(self.neuron_locations - bmu_coords, axis=2)
         influence = np.exp(-grid_dist**2 / (2 * sigma**2))
@@ -65,7 +65,7 @@ class SOM:
         
     def predict(self, data: Array) -> Labels:
         if self.weights is None:
-            raise RuntimeError("Fit method must be called before prediction.")
+            raise RuntimeError("O método fit deve ser chamado antes de fazer previsões.")
         
         bmu_indices = np.apply_along_axis(self._find_bmu, 1, data)
         return bmu_indices[:, 0] * self.map_width + bmu_indices[:, 1]

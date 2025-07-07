@@ -66,7 +66,7 @@ class DBSCAN:
     def fit_predict(self, data: Array) -> Labels:
         self.fit(data)
         if self.labels_ is None:
-            raise RuntimeError("Fit method failed to produce labels.")
+            raise RuntimeError("O método fit falhou em produzir labels.")
         return self.labels_
 
 
